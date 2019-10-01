@@ -1,6 +1,6 @@
 # Optimierung
 
-# Rundreise
+# Traveling Salesman Problem
 Kürzeste Rundreise zwischen Knoten mit beliebigen Abständen finden
 
 Umgesetzt mit ...

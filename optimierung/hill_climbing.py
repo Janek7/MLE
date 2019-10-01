@@ -22,20 +22,19 @@ def hill_climb(distance_matrix, iterations, simulated_annealing=False):
     saved_hypothesis = None
     temp = 10000000
 
-    for i in range(iterations):
+    for i in range(1, iterations):
 
         saved_hypothesis = hypothesis.copy()
         hypothesis = move_one_step_at_random(hypothesis)
-
         # normal hill climbing
         if fitness(hypothesis, distance_matrix) > last_fitness:
             last_fitness = fitness(hypothesis, distance_matrix)
             print('New fitness:', last_fitness)
         # simulated annealing
         elif simulated_annealing \
-                and random.random() < math.exp((fitness(hypothesis, distance_matrix) - last_fitness) / 1):
+                and random.random() < math.exp((fitness(hypothesis, distance_matrix) - last_fitness) / temp):
             last_fitness = fitness(hypothesis, distance_matrix)
-            print('New fitness:', last_fitness, '(simulated annealing)')
+            print('New fitness:', last_fitness, '( simulated annealing, temp:', temp, ')')
             temp = temp/math.log(i + 1)
         else:
             hypothesis = saved_hypothesis
