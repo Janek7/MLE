@@ -35,7 +35,7 @@ def hill_climb(distance_matrix, iterations, simulated_annealing=False):
                 and random.random() < math.exp((fitness(hypothesis, distance_matrix) - last_fitness) / temp):
             last_fitness = fitness(hypothesis, distance_matrix)
             print('New fitness:', last_fitness, '( simulated annealing, temp:', temp, ')')
-            temp = temp/math.log(i + 1)
+            temp = temp/math.log(i + 1)  # oder mit parameter -= epsilon
         else:
             hypothesis = saved_hypothesis
 
