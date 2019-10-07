@@ -5,6 +5,7 @@ import scipy.spatial.distance
 P = 100  # Population size
 R = 0.5  # share to replace with crossover
 M = 0.1  # share to mutate with one bit
+FITNESS_THRESHOLD = 70
 STRING_LENGTH = 100
 STRING_CONTENT = '1'  # random, 0 or 1
 
@@ -25,37 +26,35 @@ class GeneticAlgorithm:  # hypothesis == individual
     def run(self):
         self.print_generation()
 
-        while self.optimum_bit_string not in self.population:
+        # while self.optimum_bit_string not in self.population:
+        while self.fitness_dict[self.best_hypothesis] < FITNESS_THRESHOLD:
             new_generation = []
 
             # Selection
             while len(new_generation) < P * R:
                 new_generation.append(self.select_random_hypothesis(self.population))
-            print('New generation size after selecting random:', len(new_generation))
 
             # Crossover
             parents = []
-            while len(parents) < R * (P):  # select parents
-                parents.append(self.select_random_hypothesis(new_generation))  # parents aus den bereits ausgewählten oder allen?
-            print('Parents:', len(parents))
-            for i in range(0, len(parents) - 2, 2):  # create children
-                children = self.cross_over([parents[i], parents[i + 1]])
-                new_generation += children
-            print('New generation size after adding children:', len(new_generation))
+            while len(parents) < R * (P / 2):  # select parents
+                # parents aus den bereits ausgewählten (new_generation) oder allen (population)?
+                father = new_generation[random.randint(0, len(new_generation) - 1)]
+                # father = self.select_random_hypothesis(new_generation)  # <- ERROR
+                mother = new_generation[random.randint(0, len(new_generation) - 1)]
+                # mother = self.select_random_hypothesis(new_generation)
+                if father != mother:
+                    parents.append((father, mother))
+            for parent_tupel in parents:
+                new_generation += self.cross_over(parent_tupel)
 
             # Mutation
-            hypotheses_to_mutate = random.sample(new_generation, int(P * M))
-            print('Hypothesen zum mutieren:', len(hypotheses_to_mutate))
-            new_generation = [h for h in new_generation if h not in hypotheses_to_mutate]  # remove old hypotheses
-            print('New generation ohne Hypothesen zum mutieren:', len(new_generation))
-            for h in hypotheses_to_mutate:
-                new_generation.append(self.mutate(h))
-            print('New generation mit mutierten Hypothesen:', len(new_generation))
+            for i in range(int(P * M)):
+                index = random.randint(0, len(new_generation) - 1)
+                new_generation[index] = self.mutate(new_generation[index])
 
             # keep best individual
             if self.best_hypothesis not in new_generation:
                 new_generation.append(self.best_hypothesis)
-            print('New generation mit bester hypothese:', len(new_generation))
 
             # update population and fitness_dict
             self.population = new_generation
@@ -64,12 +63,19 @@ class GeneticAlgorithm:  # hypothesis == individual
             self.update_best_hypothesis()
             self.print_generation()
 
+        self.print_finish()
+
     def fitness(self, bit_string):
         """
         returns the hamming distance between the given string and the optimum_string as the fitness
         :return: fitness
         """
-        return int(len(self.optimum_bit_string) - scipy.spatial.distance.hamming(self.optimum_bit_string, bit_string))
+        # return int(len(self.optimum_bit_string) - scipy.spatial.distance.hamming(self.optimum_bit_string, bit_string))
+        distance = 0
+        for i in range(STRING_LENGTH - 1):
+            if bit_string[i] != self.optimum_bit_string[i]:
+                distance += 1
+        return len(self.optimum_bit_string) - distance
 
     def select_random_hypothesis(self, population):
         """
@@ -77,19 +83,16 @@ class GeneticAlgorithm:  # hypothesis == individual
         :param population: population to select from
         :return: random hypothesis
         """
-        rand_num = random.random()
-        summation = 0
+        selection_probability = random.random()
+        probability_sum = 0
         index = random.randint(0, len(population) - 1)
-        whole_fitness_sum = sum([self.fitness(h) for h in population])
+        population_fitness_sum = sum([self.fitness(h) for h in population])
 
         while True:  # do while loop
             index += 1
             index = index % P
-            if index == len(population):
-                index -= 1
-                break
-            summation += (self.fitness(population[index]) / whole_fitness_sum)
-            if summation >= rand_num:  # do while loop
+            probability_sum += (self.fitness(population[index]) / population_fitness_sum)
+            if selection_probability < probability_sum:  # do while loop
                 break
 
         return population[index]
@@ -98,7 +101,7 @@ class GeneticAlgorithm:  # hypothesis == individual
     def cross_over(parents):
         """
         creates two children with cross over from parents based on a random cross over point
-        :param parents: parent list
+        :param parents: parent tupel
         :return: child list
         """
         cross_over_point = random.randint(1, STRING_LENGTH - 1)
@@ -112,7 +115,7 @@ class GeneticAlgorithm:  # hypothesis == individual
         mutates one random index to the complementary bit
         """
         index = random.randint(0, len(hypothesis) - 1)
-        return hypothesis[:index] + '0' if hypothesis[index] == '1' else '1' + hypothesis[index + 1:]
+        return hypothesis[:index] + ('0' if hypothesis[index] == '1' else '1') + hypothesis[index + 1:]
 
     def update_fitness_dict(self):
         """
@@ -124,7 +127,7 @@ class GeneticAlgorithm:  # hypothesis == individual
         """
         updates self.best_hypothesis with best key of actual self.fitness_dict
         """
-        self.best_hypothesis = min(self.fitness_dict, key=self.fitness_dict.get)
+        self.best_hypothesis = max(self.fitness_dict, key=self.fitness_dict.get)
 
     @staticmethod
     def generate_random_bit_string(string_content):
@@ -148,6 +151,14 @@ class GeneticAlgorithm:  # hypothesis == individual
         """
         print(str('-' * 10 + ' {}. generation ' + '-' * 10).format(self.generation_counter))
         print('Population size: {}'.format(len(self.population)))
+        print('Best hypothesis: {}, fitness: {}'.format(self.best_hypothesis, self.fitness(self.best_hypothesis)))
+
+    def print_finish(self):
+        """
+        prints information after finish
+        """
+        print('-' * 150)
+        print('Target reachted after {} generations'.format(self.generation_counter))
         print('Best hypothesis: {}, fitness: {}'.format(self.best_hypothesis, self.fitness(self.best_hypothesis)))
 
 
