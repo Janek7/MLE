@@ -1,6 +1,3 @@
-import scipy.spatial.distance
-
-
 def hamming_distance(string1, string2):
     distance = 0
     for i in range(len(string1)):
@@ -18,3 +15,6 @@ fitnes = int(len(target) - hamming)
 print('Hamming', hamming)
 print('fitnes', fitnes)
 print()
+
+#plt.plot(range(len(self.best_fitness_hypotheses)), self.best_fitness_hypotheses)
+#plt.show()
