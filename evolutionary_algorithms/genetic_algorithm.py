@@ -1,21 +1,37 @@
 import random
 import matplotlib.pyplot as plt
 
-P = 100  # Population size
-R = 0.5  # share to replace with crossover
-M = 0.1  # share to mutate with one bit
-FITNESS_THRESHOLD = 70
-STRING_LENGTH = 100
-STRING_CONTENT = '1'  # random, 0 or 1
 
+class GeneticAlgorithm:
+    """
+    a generic genetic algorithm to optimize a population
+    """
 
-class GeneticAlgorithm:  # hypothesis == individual
-
-    def __init__(self):
-        self.optimum_bit_string = self.generate_random_bit_string(STRING_CONTENT)
-        print('Optimum bit string:', self.optimum_bit_string)
+    def __init__(self, population, fitness, cross_over, mutate, fitness_threshold, r, m, optimum=None):
+        """
+        generates a new genetic algorithm
+        :param population: population to optimize
+        :param fitness: fitness function
+        :param cross_over: cross over function
+        :param mutate: mutate function
+        :param fitness_threshold: fitness value to end when reached
+        :param r: share to replace with cross over
+        :param m: share to mutate
+        :param optimum: optimum hypothesis
+        """
+        self.population = population
+        # Functions
+        self.fitness = fitness
+        self.cross_over = cross_over
+        self.mutate = mutate
+        # Parameter
+        self.fitness_threshold = fitness_threshold
+        self.r = r
+        self.m = m
+        self.p = len(self.population)
+        self.optimum = optimum
+        print('Optimum:', self.optimum)
         # create first generation
-        self.population = [self.generate_random_bit_string('random') for individual in range(P)]
         self.generation_counter = 1
         self.fitness_dict = None
         self.update_fitness_dict()
@@ -26,28 +42,24 @@ class GeneticAlgorithm:  # hypothesis == individual
     def run(self):
         self.print_generation()
 
-        # while self.optimum_bit_string not in self.population:
-        while self.fitness_dict[self.best_hypothesis] < FITNESS_THRESHOLD or self.optimum_bit_string in self.population:
+        while self.fitness_dict[self.best_hypothesis] < self.fitness_threshold and self.optimum not in self.population:
             new_generation = []
 
             # Selection
-            while len(new_generation) < P * R:
+            while len(new_generation) < self.p * self.r:
                 new_generation.append(self.select_random_hypothesis(self.population))
 
             # Crossover
-            parents = []
-            while len(parents) < R * (P / 2):  # select parents
-                # parents aus den bereits ausgewählten (new_generation) oder allen (population)?
-                father = self.select_random_hypothesis(self.population)  # <- ERROR
-                # mother = new_generation[random.randint(0, len(new_generation) - 1)]
+            parent_counter = 0
+            while parent_counter < self.r * (self.p / 2):
+                father = self.select_random_hypothesis(self.population)
                 mother = self.select_random_hypothesis(self.population)
                 if father != mother:
-                    parents.append((father, mother))
-            for parent_tupel in parents:
-                new_generation += self.cross_over(parent_tupel)
+                    parent_counter += 1
+                    new_generation += self.cross_over((father, mother))
 
             # Mutation
-            for i in range(int(P * M)):
+            for i in range(int(self.p * self.m)):
                 index = random.randint(0, len(new_generation) - 1)
                 new_generation[index] = self.mutate(new_generation[index])
 
@@ -64,18 +76,6 @@ class GeneticAlgorithm:  # hypothesis == individual
 
         self.print_finish()
 
-    def fitness(self, bit_string):
-        """
-        returns the hamming distance between the given string and the optimum_string as the fitness
-        :return: fitness
-        """
-        # return int(len(self.optimum_bit_string) - scipy.spatial.distance.hamming(self.optimum_bit_string, bit_string))
-        distance = 0
-        for i in range(STRING_LENGTH - 1):
-            if bit_string[i] != self.optimum_bit_string[i]:
-                distance += 1
-        return len(self.optimum_bit_string) - distance
-
     def select_random_hypothesis(self, population):
         """
         selects a random hypothesis based on the probability of fitness / sum(all fitness)
@@ -85,42 +85,22 @@ class GeneticAlgorithm:  # hypothesis == individual
         selection_probability = random.random()
         probability_sum = 0
         index = random.randint(0, len(population) - 1)
-        population_fitness_sum = sum([self.fitness(h) for h in population])
+        population_fitness_sum = sum([self.fitness(h, self.optimum) for h in population])
 
         while True:  # do while loop
             index += 1
-            index = index % P
-            probability_sum += (self.fitness(population[index]) / population_fitness_sum)
+            index = index % self.p
+            probability_sum += (self.fitness(population[index], self.optimum) / population_fitness_sum)
             if selection_probability < probability_sum:  # do while loop
                 break
 
         return population[index]
 
-    @staticmethod
-    def cross_over(parents):
-        """
-        creates two children with cross over from parents based on a random cross over point
-        :param parents: parent tupel
-        :return: child list
-        """
-        cross_over_point = random.randint(1, STRING_LENGTH - 1)
-        child_one = parents[0][:cross_over_point] + parents[1][cross_over_point:]
-        child_two = parents[1][:cross_over_point] + parents[0][cross_over_point:]
-        return [child_one, child_two]
-
-    @staticmethod
-    def mutate(hypothesis):
-        """
-        mutates one random index to the complementary bit
-        """
-        index = random.randint(0, len(hypothesis) - 1)
-        return hypothesis[:index] + ('0' if hypothesis[index] == '1' else '1') + hypothesis[index + 1:]
-
     def update_fitness_dict(self):
         """
-        updates self.fitness_dict with individuals of self.population as key and their fitness as value
+        updates self.fitness_dict with individuals / hypotheses of self.population as key and their fitness as value
         """
-        self.fitness_dict = {i: self.fitness(i) for i in self.population}
+        self.fitness_dict = {h: self.fitness(h, self.optimum) for h in self.population}
 
     def update_best_hypothesis(self):
         """
@@ -129,29 +109,14 @@ class GeneticAlgorithm:  # hypothesis == individual
         self.best_hypothesis = max(self.fitness_dict, key=self.fitness_dict.get)
         self.best_fitness_generation_list.append(self.fitness_dict[self.best_hypothesis])
 
-    @staticmethod
-    def generate_random_bit_string(string_content):
-        """
-        generates a random bit string with top parameters
-        :param string_content: bit
-        :return: generated string
-        """
-        string = ''
-        for i in range(STRING_LENGTH):
-            if string_content is 'random':
-                string += str(1) if random.random() < 0.5 else str(0)
-            else:
-                string += str(string_content)
-
-        return string
-
     def print_generation(self):
         """
         prints information about the actual generation
         """
         print(str('-' * 10 + ' {}. generation ' + '-' * 10).format(self.generation_counter))
-        print('Population size: {}'.format(len(self.population)))
-        print('Best hypothesis: {}, fitness: {}'.format(self.best_hypothesis, self.fitness(self.best_hypothesis)))
+        print('Population size: {}'.format(self.p))
+        print('Best hypothesis: {}, fitness: {}'.format(self.best_hypothesis, self.fitness(self.best_hypothesis,
+                                                                                           self.optimum)))
 
     def print_finish(self):
         """
@@ -159,11 +124,7 @@ class GeneticAlgorithm:  # hypothesis == individual
         """
         print('-' * 150)
         print('Target reachted after {} generations'.format(self.generation_counter))
-        print('Best hypothesis: {}, fitness: {}'.format(self.best_hypothesis, self.fitness(self.best_hypothesis)))
-
+        print('Best hypothesis: {}, fitness: {}'.format(self.best_hypothesis, self.fitness(self.best_hypothesis,
+                                                                                           self.optimum)))
         plt.plot(range(len(self.best_fitness_generation_list)), self.best_fitness_generation_list)
         plt.show()
-
-
-if __name__ == '__main__':
-    GeneticAlgorithm().run()

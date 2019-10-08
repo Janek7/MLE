@@ -2,4 +2,5 @@
 
 ## Genetischer Algorithmus
 
-Beispiel: [Bit String optimieren](genetischer_algorithmus.py)
++ [Implementierung](genetic_algorithm.py)
++ Anwendung: [Bit String Optimierung](bit_string_optimization.py)
