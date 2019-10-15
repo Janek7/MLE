@@ -1,8 +1,3 @@
-from optimization.tsp_optimize import *
-
-NUMBER_OF_NODES = 8
-MAX_DISTANCE = 10
-ITERATIONS = 100000
 
 
 class HillClimber:
@@ -28,7 +23,7 @@ class HillClimber:
         """
         self.data = data
         print('-' * 30 + 'Hill Climbing' + '-' * 30)
-        hypothesis = build_start_hypothesis(data)
+        hypothesis = self.build_start_hypothesis(data)
         print('Starting hypothesis:', str(hypothesis))
         last_fitness = self.fitness(hypothesis, data)
         print('Starting fitness:', last_fitness)
@@ -51,7 +46,7 @@ class HillClimber:
 
     def print_result(self):
         print('-' * 20 + 'Hill Climbing' + '-' * 20)
-        print('Optimal fitness:', fitness(self.optimal_hypothesis, self.data))
+        print('Optimal fitness:', self.fitness(self.optimal_hypothesis, self.data))
         print('Iterations:', self.iterations_needed)
         print('Shortest round trip:', str(self.optimal_hypothesis),
-              'distance:', fitness(self.optimal_hypothesis, self.data) * -1)
+              'distance:', self.fitness(self.optimal_hypothesis, self.data) * -1)

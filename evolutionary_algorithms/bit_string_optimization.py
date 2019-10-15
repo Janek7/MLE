@@ -5,7 +5,7 @@ from evolutionary_algorithms.genetic_algorithm import GeneticAlgorithm
 P = 100  # Population size
 R = 0.5  # share to replace with crossover
 M = 0.1  # share to mutate with one bit
-FITNESS_THRESHOLD = 70
+FITNESS_THRESHOLD = 100
 STRING_LENGTH = 100
 STRING_CONTENT = '1'  # random, 0 or 1
 

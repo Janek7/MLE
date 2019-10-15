@@ -1,10 +1,5 @@
 import math
-from optimization.tsp_methods import *
-
-NUMBER_OF_NODES = 8
-MAX_DISTANCE = 10
-TEMP = 10
-EPSILON = 0.1
+import random
 
 
 class SimulatedAnnealer:
@@ -47,11 +42,17 @@ class SimulatedAnnealer:
             hypothesis = self.move_one_step_at_random(hypothesis)
             i += 1
 
-            if random.random() < math.exp((fitness(hypothesis, data) - last_fitness) / temp):
-                last_fitness = self.fitness(hypothesis, data)
-                print('New fitness:', last_fitness, '( temp:', temp, ')')
+            new_fitness = self.fitness(hypothesis, data)
+            if new_fitness > last_fitness:
+                last_fitness = new_fitness
             else:
-                hypothesis = saved_hypothesis
+                probability = math.exp((new_fitness - last_fitness) / temp)
+                print(probability)
+                if random.random() < probability:
+                    last_fitness = new_fitness
+                    print('New fitness:', last_fitness, '( temp:', temp, ')')
+                else:
+                    hypothesis = saved_hypothesis
             temp -= epsilon
 
             if temp < epsilon:  # do while
@@ -64,7 +65,7 @@ class SimulatedAnnealer:
 
     def print_result(self):
         print('-' * 20 + 'Simulated Annealing' + '-' * 20)
-        print('Optimal fitness:', fitness(self.optimal_hypothesis, self.data))
+        print('Optimal fitness:', self.fitness(self.optimal_hypothesis, self.data))
         print('Iterations:', self.iterations_needed)
         print('Shortest round trip:', str(self.optimal_hypothesis),
-              'distance:', fitness(self.optimal_hypothesis, self.data) * -1)
+              'distance:', self.fitness(self.optimal_hypothesis, self.data) * -1)

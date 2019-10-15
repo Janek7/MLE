@@ -43,7 +43,7 @@ class GeneticAlgorithm:
         self.print_generation()
 
         while self.fitness_dict[self.best_hypothesis] < self.fitness_threshold and self.optimum not in self.population:
-            new_generation = []
+            new_generation = [self.best_hypothesis]
 
             # Selection
             while len(new_generation) < self.p * self.r:
@@ -62,10 +62,6 @@ class GeneticAlgorithm:
             for i in range(int(self.p * self.m)):
                 index = random.randint(0, len(new_generation) - 1)
                 new_generation[index] = self.mutate(new_generation[index])
-
-            # keep best individual
-            if self.best_hypothesis not in new_generation:
-                new_generation.append(self.best_hypothesis)
 
             # update population and fitness_dict
             self.population = new_generation

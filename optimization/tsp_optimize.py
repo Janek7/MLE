@@ -7,9 +7,9 @@ MAX_DISTANCE = 10
 METHOD = 'HC'  # HC or SA
 
 # only for hill climbing
-ITERATIONS = 100000
+ITERATIONS = 10000
 # only for simulated annealing
-TEMP = 10
+TEMP = 1000
 EPSILON = 0.1
 
 
