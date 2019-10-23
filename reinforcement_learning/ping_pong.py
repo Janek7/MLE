@@ -4,7 +4,6 @@ from OpenGL.GL import *
 from OpenGL.GLU import *
 from reinforcement_learning.reinforcement_learning_structures import *
 
-
 # reinforcement learning parameters
 
 EPISODES = 100000
@@ -13,7 +12,6 @@ DISCOUNT_FACTOR = 0.9
 SELECT_ACTION_STRATEGY = 'e_greedy'
 EPSILON = 0.1
 STATE_DIMENSION_SIZES = [11, 11, 11, 2, 2]  # xBall, yBall, xSchlaeger, xVel, yVel
-
 
 # velocity value mapping
 
@@ -26,6 +24,9 @@ X_VEL_RIGHT_VALUE = 1
 X_VEL_LEFT_VALUE = -1
 Y_VEL_TOP_VALUE = 1
 Y_VEL_BOTTOM_VALUE = -1
+
+
+# actions: types of moving the bat
 
 
 def action_left(state_properties):
@@ -55,6 +56,9 @@ class GameGL(object):
 
 
 class PingPongGame(GameGL, ReinforcementLearningDomain):
+    """
+    Ping pong game which trains an reinforcement learning agent to perform bat movement
+    """
 
     windowName = "PingPong"
     pixelSize = 30
@@ -75,7 +79,8 @@ class PingPongGame(GameGL, ReinforcementLearningDomain):
         # init reinforcement learning structures
         self.actions = [action_left, action_stay, action_right]
         self.state_max_dimension_sizes = STATE_DIMENSION_SIZES
-        self.agent = ReinforcementLearningAgent(self, EPISODES, DISCOUNT_FACTOR, LEARNING_RATE, SELECT_ACTION_STRATEGY, EPSILON)
+        self.agent = ReinforcementLearningAgent(self, EPISODES, DISCOUNT_FACTOR, LEARNING_RATE, SELECT_ACTION_STRATEGY,
+                                                EPSILON)
         self.agent.init_state(self.get_state())
         self.learning = True
         self.agent.learn()
@@ -93,11 +98,6 @@ class PingPongGame(GameGL, ReinforcementLearningDomain):
             sys.exit(0)
 
     def action(self, action_index):
-        # action = 2.0 * np.random.random() - 1.0
-        # if action < -0.3:
-        #     self.xSchlaeger -= 1
-        # if action > 0.3:
-        #     self.xSchlaeger += 1
 
         actual_state = self.get_state()
 

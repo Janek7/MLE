@@ -21,13 +21,13 @@ class ReinforcementLearningAgent:
     """
     reinforcement learning algorithm
     """
+
     def __init__(self, reinforcement_learning_domain,
                  episodes, discount_factor, learning_rate, select_action_strategy, epsilon=0.1):
         """
         creates a new reinforcement learning environment
-        :param reward_function: reward function
-        :param actions: actions
-        :param state_dimension_sizes: list of the length of each state dimension
+        :param reinforcement_learning_domain: application domain with domain specific structures as actions and max
+                                              dimension sizes
         :param episodes: number of episodes to learn
         :param discount_factor: discount factor
         :param learning_rate: alpha
@@ -36,7 +36,6 @@ class ReinforcementLearningAgent:
         """
 
         # parameter
-        # self.reward = reinforcement_learning_domain.action
         self.reinforcement_learning_domain = reinforcement_learning_domain
         self.actions = reinforcement_learning_domain.actions
         self.state_dimension_sizes = reinforcement_learning_domain.state_max_dimension_sizes
@@ -54,7 +53,10 @@ class ReinforcementLearningAgent:
         self.state_index = None
 
     def learn(self):
-
+        """
+        learns at the basis of rewards to react on specific states
+        :return:
+        """
         self.initialize_q_values_arbitrarily()
 
         for i in range(self.episodes):
@@ -63,7 +65,7 @@ class ReinforcementLearningAgent:
 
             while True:
                 action_index = self.select_action()
-                reward, future_state = self.perform_action(action_index)
+                reward, future_state = self.reinforcement_learning_domain.action(action_index)
                 self.update_q_table(action_index, reward, future_state)
                 self.update_state(future_state)
                 if self.state_terminated:
@@ -83,20 +85,20 @@ class ReinforcementLearningAgent:
                                              reward, future_state_index)
 
     def q_learning_update_formula(self, state_index, action_index, reward, future_state_index):
+        """
+        updates a the reward q value of state using reward and future state
+        :param state_index: index of actual state
+        :param action_index: index of performed action
+        :param reward: reward from performed action
+        :param future_state_index: index of future state
+        :return: new q value for performed action and state
+        """
         qt = self.q_table[state_index, action_index]
-        new_qt = qt + self.learning_rate * (reward
-                                            + self.discount_factor
-                                            * max([self.q_table[future_state_index, i] for i in range(len(self.actions))])
-                                            - qt)
-        return new_qt
-
-    def perform_action(self, action_index):
-        """
-        :return:
-        """
-        # new_state = self.actions[self.action_index](self.state)
-        reward, new_state = self.reinforcement_learning_domain.action(action_index)
-        return reward, new_state
+        qt += self.learning_rate * (reward
+                                    + self.discount_factor
+                                    * max([self.q_table[future_state_index, i] for i in range(len(self.actions))])
+                                    - qt)
+        return qt
 
     def select_action(self):
         """
