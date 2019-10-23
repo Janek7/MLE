@@ -3,8 +3,8 @@
 ##  Ping Pong
 Ping Pong spiel erlernen
 
-+ [Reinforcement Learning Algorithmus](reinforcement_learning.py)
-+ [Ping Pong UI](ping_pong_ui.py)
++ [Reinforcement Learning Algorithmus](reinforcement_learning_structures.py)
++ [Ping Pong UI](ping_pong.py)
 
 ## OpenGL Installation
 + ``pip install pyopengl``

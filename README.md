@@ -8,4 +8,4 @@ Maschinelles Lernen (MLE) - Repository
     2. [Simulated Annealing](optimierung/hill_climbing.py)
 2. [Evolutionäre Algorithmen](evolutionäre_algorithmen)
     1. [Genetischer Algorithmus](evolutionäre_algorithmen/genetischer_algorithmus.py)
-3. [Reinforcement Learning](reinforcement_learning/reinforcement_learning.py)
+3. [Reinforcement Learning](reinforcement_learning/reinforcement_learning_structures.py)
