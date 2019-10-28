@@ -6,12 +6,12 @@ from reinforcement_learning.reinforcement_learning_structures import *
 
 # reinforcement learning parameters
 
-EPISODES = 100000
+EPISODES = 5000
 LEARNING_RATE = 0.01
 DISCOUNT_FACTOR = 0.9
-SELECT_ACTION_STRATEGY = 'e_greedy'
+SELECT_ACTION_STRATEGY = 'softmax'
 EPSILON = 0.1
-STATE_DIMENSION_SIZES = [11, 11, 11, 2, 2]  # xBall, yBall, xSchlaeger, xVel, yVel
+STATE_DIMENSION_SIZES = [10, 11, 10, 2, 2]  # xBall, yBall, xSchlaeger, xVel, yVel
 
 # velocity value mapping
 
@@ -101,18 +101,13 @@ class PingPongGame(GameGL, ReinforcementLearningDomain):
 
         actual_state = self.get_state()
 
-        if action_index == 0:
-            self.xSchlaeger = self.actions[0](actual_state)[2]
-        elif action_index == 1:
-            self.xSchlaeger = self.actions[1](actual_state)[2]
-        elif action_index == 2:
-            self.xSchlaeger = self.actions[2](actual_state)[2]
+        self.xSchlaeger = self.actions[action_index](actual_state)[2]
 
         # don't allow puncher to leave the pitch
         if self.xSchlaeger < 0:
             self.xSchlaeger = 0
-        if self.xSchlaeger > self.state_max_dimension_sizes[2]:
-            self.xSchlaeger = self.state_max_dimension_sizes[2]
+        if self.xSchlaeger > self.state_max_dimension_sizes[2] - 1:
+            self.xSchlaeger = self.state_max_dimension_sizes[2] - 1
 
         # change position regarding to velocity
         self.xBall += self.xV
@@ -157,15 +152,19 @@ class PingPongGame(GameGL, ReinforcementLearningDomain):
         elif self.yBall < 0:
             self.yBall = 0
 
+        print(self.get_state_parameter_value_indices())
         return reward, self.get_state_parameter_value_indices()
 
     def get_state(self):
         return [self.xBall, self.yBall, self.xSchlaeger, self.xV, self.yV]
 
     def get_state_parameter_value_indices(self):
-        return [self.xBall - 1, self.yBall - 1, self.xSchlaeger - 1,
+        # print(self.xBall - 1, self.yBall - 1, self.xSchlaeger - 1)
+        # test = [self.xBall, self.yBall, self.xSchlaeger,
+        test = [self.xBall - 1, self.yBall - 1, self.xSchlaeger,
                 X_VEL_RIGHT_INDEX if self.xV != X_VEL_LEFT_VALUE else X_VEL_LEFT_INDEX,
                 Y_VEL_TOP_INDEX if self.yV != Y_VEL_BOTTOM_VALUE else Y_VEL_BOTTOM_INDEX]
+        return test
 
     def display(self):
         # clear the screen
@@ -180,7 +179,8 @@ class PingPongGame(GameGL, ReinforcementLearningDomain):
         glLoadIdentity()
 
         # move bat
-        self.action(random.randint(0, len(self.actions)))
+        action_index = self.agent.state_reaction(self.get_state_parameter_value_indices())
+        self.action(action_index)
 
         # repaint
         self.draw_ball()

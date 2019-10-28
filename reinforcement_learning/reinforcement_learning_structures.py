@@ -1,6 +1,9 @@
 import random
 from abc import abstractmethod
 import numpy as np
+import math
+
+from utils import get_random_index_with_probabilities
 
 
 class ReinforcementLearningDomain:
@@ -61,15 +64,23 @@ class ReinforcementLearningAgent:
 
         for i in range(self.episodes):
             print('{}. episode'.format(i))
+            self.state_terminated = False
             self.update_state(self.initial_state_parameters)
 
             while True:
-                action_index = self.select_action()
-                reward, future_state = self.reinforcement_learning_domain.action(action_index)
-                self.update_q_table(action_index, reward, future_state)
-                self.update_state(future_state)
+                self.state_reaction()
                 if self.state_terminated:
                     break
+
+    def state_reaction(self, state=None):
+
+        state_index = self.state_index if state is None else self.get_state_index(state)
+
+        action_index = self.select_action(state_index)
+        reward, future_state = self.reinforcement_learning_domain.action(action_index)
+        self.update_q_table(action_index, reward, future_state)
+        self.update_state(future_state)  # for interal training use
+        return action_index  # for external use
 
     def update_q_table(self, action_index, reward, future_state):
         """
@@ -100,21 +111,29 @@ class ReinforcementLearningAgent:
                                     - qt)
         return qt
 
-    def select_action(self):
+    def select_action(self, state_index):
         """
         selects an action to take
+        :param state_index: index of current state
         greedy: best reward
         e-greedy: best reward action with probability 1 - self.epsilon, random action with probability self.epsilon
         softmax: use of weighted probabilities
         :return:
         """
         if self.select_action_strategy == 'greedy':
-            return self.greedy_selection(self.state_index)
+            return self.greedy_selection(state_index)
+
         elif self.select_action_strategy == 'e_greedy':
             return random.randint(0, len(self.actions) - 1) if random.random() < self.epsilon \
-                else self.greedy_selection(self.state_index)
+                else self.greedy_selection(state_index)
+
         elif self.select_action_strategy == 'softmax':
-            raise Exception('softmax select action strategy not implemented yet')
+            q_values = self.q_table[state_index]
+            probabilities = [(math.exp(self.q_table[state_index, a] / state_index) /
+                              sum([math.exp(self.q_table[state_index, b] / state_index)
+                                   for b in range(len(self.actions)) if b != a]))
+                             for a in range(len(self.actions))]
+            return get_random_index_with_probabilities(probabilities)
         else:
             raise Exception('select action strategy must be greedy, e_greedy or softmax')
 
@@ -127,11 +146,14 @@ class ReinforcementLearningAgent:
         action_rewards = self.q_table[state_index]
         max_reward_action_index = 0
 
-        for idx, value in np.ndenumerate(self.q_table[state_index][1:]):
+        for idx, value in np.ndenumerate(self.q_table[state_index]):
             if value > action_rewards[max_reward_action_index]:
                 max_reward_action_index = idx[0]  # idx in numpy enumeration is tupel (idx,)
 
         return max_reward_action_index
+
+    def softmax_e_quotient(self, state_index, action_index):
+        return math.exp(self.q_table[state_index, action_index] / state_index)
 
     def initialize_q_values_arbitrarily(self):
         """
