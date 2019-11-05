@@ -6,13 +6,19 @@ import math
 from utils import get_random_index_with_probabilities
 
 
+# selection strategies
+GREEDY = 'greedy'
+E_GREEDY = 'e_greedy'
+SOFTMAX = 'softmax'
+
+
 class ReinforcementLearningDomain:
     """
     abstract class with domain specific structures of reinforcement learning
     """
 
     actions = None
-    state_max_dimension_sizes = None
+    state_dimension_values = None
     agent = None
 
     @abstractmethod
@@ -41,7 +47,8 @@ class ReinforcementLearningAgent:
         # parameter
         self.reinforcement_learning_domain = reinforcement_learning_domain
         self.actions = reinforcement_learning_domain.actions
-        self.state_dimension_sizes = reinforcement_learning_domain.state_max_dimension_sizes
+        self.state_dimension_values = reinforcement_learning_domain.state_dimension_values
+        self.dimension_sizes = [len(dimension_value_list) for dimension_value_list in self.state_dimension_values]
         self.episodes = episodes
         self.discount_factor = discount_factor
         self.learning_rate = learning_rate
@@ -72,6 +79,8 @@ class ReinforcementLearningAgent:
                 if self.state_terminated:
                     break
 
+        print(self.q_table)
+
     def state_reaction(self, state=None):
 
         state_index = self.state_index if state is None else self.get_state_index(state)
@@ -79,7 +88,7 @@ class ReinforcementLearningAgent:
         action_index = self.select_action(state_index)
         reward, future_state = self.reinforcement_learning_domain.action(action_index)
         self.update_q_table(action_index, reward, future_state)
-        self.update_state(future_state)  # for interal training use
+        self.update_state(future_state)  # for internal training use
         return action_index  # for external use
 
     def update_q_table(self, action_index, reward, future_state):
@@ -87,7 +96,7 @@ class ReinforcementLearningAgent:
         updates the q values for given state
         :param action_index: index of performed action
         :param reward: reward of actual state
-        :param future_state: future_state as parameter array
+        :param future_state: future_state as dimension value array
         :return:
         """
         future_state_index = self.get_state_index(future_state)
@@ -105,10 +114,7 @@ class ReinforcementLearningAgent:
         :return: new q value for performed action and state
         """
         qt = self.q_table[state_index, action_index]
-        qt += self.learning_rate * (reward
-                                    + self.discount_factor
-                                    * max([self.q_table[future_state_index, i] for i in range(len(self.actions))])
-                                    - qt)
+        qt += self.learning_rate * (reward + self.discount_factor * max(self.q_table[future_state_index]) - qt)
         return qt
 
     def select_action(self, state_index):
@@ -120,15 +126,14 @@ class ReinforcementLearningAgent:
         softmax: use of weighted probabilities
         :return:
         """
-        if self.select_action_strategy == 'greedy':
+        if self.select_action_strategy == GREEDY:
             return self.greedy_selection(state_index)
 
-        elif self.select_action_strategy == 'e_greedy':
+        elif self.select_action_strategy == E_GREEDY:
             return random.randint(0, len(self.actions) - 1) if random.random() < self.epsilon \
                 else self.greedy_selection(state_index)
 
-        elif self.select_action_strategy == 'softmax':
-            q_values = self.q_table[state_index]
+        elif self.select_action_strategy == SOFTMAX:
             probabilities = [(math.exp(self.q_table[state_index, a] / state_index) /
                               sum([math.exp(self.q_table[state_index, b] / state_index)
                                    for b in range(len(self.actions)) if b != a]))
@@ -144,6 +149,9 @@ class ReinforcementLearningAgent:
         :return: index of best action
         """
         action_rewards = self.q_table[state_index]
+        if self.reinforcement_learning_domain.learning is False:
+            # print(action_rewards)
+            pass
         max_reward_action_index = 0
 
         for idx, value in np.ndenumerate(self.q_table[state_index]):
@@ -158,9 +166,14 @@ class ReinforcementLearningAgent:
     def initialize_q_values_arbitrarily(self):
         """
         create the q_table as a table with x rows (number of states / properties combinations) and y columns (actions)
-        and initialize the cells with random values
+        and initialize cells with random values ((e)greedy selection) or zeros (softmax selection)
         """
-        self.q_table = np.random.rand(np.prod(self.state_dimension_sizes), len(self.actions))
+        shape = (np.prod([len(single_dimension_values) for single_dimension_values in
+                          self.state_dimension_values]), len(self.actions))
+        if self.select_action_strategy in [GREEDY, E_GREEDY]:
+            self.q_table = np.random.rand(shape[0], shape[1])
+        elif self.select_action_strategy == SOFTMAX:
+            self.q_table = np.zeros(shape)
 
     def init_state(self, state):
         """
@@ -171,24 +184,20 @@ class ReinforcementLearningAgent:
         self.initial_state_parameters = state
         self.update_state(state)
 
-    def get_state_index(self, state_indices):
+    def get_state_index(self, state):
         """
         returns index of multidimensional state in q_table
-        :param state_indices: indices of state parameter values
+        :param state: list of state parameter values
         :return: state index
         """
-        state_index = state_indices[0]
-        for dimension_idx, size in enumerate(self.state_dimension_sizes[1:]):
-            state_index = state_index * size + state_indices[dimension_idx + 1]
+        dim_value_indices = [np.where(self.state_dimension_values[dim_idx] == dim_value)[0][0]
+                             for dim_idx, dim_value in enumerate(state)]
+
+        state_index = dim_value_indices[0]
+        for dimension_idx, size in enumerate(self.dimension_sizes[1:]):
+            state_index = state_index * size + dim_value_indices[dimension_idx + 1]
         return state_index
 
     def update_state(self, state):
         self.state = state
         self.state_index = self.get_state_index(state)
-
-    def terminate(self):
-        self.state_terminated = True
-
-
-if __name__ == '__main__':
-    pass
