@@ -1,4 +1,10 @@
+import random
 from collections import Counter
+import numpy as np
+import matplotlib.pyplot as plt
+
+# dictionary Keys
+from matplotlib.colors import ListedColormap
 
 KEY_VECTOR = 'vector'
 KEY_LABEL = 'label'
@@ -11,13 +17,15 @@ class KNearestNeighbourClassifier:
     vectors = {}
     k = None
 
-    def __init__(self, k, vector_tupels):
+    def __init__(self, k):
         """
         creates a new knn model
         :param k: number of neighbours to compare
         :param vector_tupels: list of tupels (vector_as_list, label)
         """
         self.k = k
+
+    def fit(self, vector_tupels):
         for vector_tupel in vector_tupels:
             self.add(vector_tupel[0], vector_tupel[1])
 
@@ -27,14 +35,20 @@ class KNearestNeighbourClassifier:
         :param vector: vector to predict
         :return: predicted label index
         """
-        if self.get_key(vector) in self.vectors:
-            return self.vectors[self.get_key(vector)][KEY_LABEL]
+        key = self.get_key(vector)
+        if key in self.vectors:
+            return self.vectors[key][KEY_LABEL]
+
+        if isinstance(vector, np.ndarray):
+            vector = vector.tolist()
 
         self.add(vector)
-        sorted_k_nearest_neighbours = self.vectors[self.get_key(vector)][KEY_NEIGHBOURS][:self.k]
+        sorted_k_nearest_neighbours = self.vectors[key][KEY_NEIGHBOURS][:self.k]
         counter = Counter([self.vectors[vector_dict[KEY_VECTOR_KEY]][KEY_LABEL]
                            for vector_dict in sorted_k_nearest_neighbours])
-        return counter.most_common()[0][0]
+        label = counter.most_common()[0][0]
+        self.vectors[key][KEY_LABEL] = label
+        return label
 
     @staticmethod
     def euclidean_distance(vector1, vector2):
@@ -85,3 +99,68 @@ class KNearestNeighbourClassifier:
         :return: vector as string
         """
         return ''.join([str(e) for e in vector])
+
+    @staticmethod
+    def train_test_split(data, test_size):
+        """
+        splits a given data set into train and test data with share of test data
+        :param data: data
+        :param test_size: share of test data
+        :return: train data, test data
+        """
+        random.shuffle(data)
+        test_start_index = int(len(data) - test_size * len(data) - 1)
+        return data[:test_start_index], data[test_start_index:]
+
+    def accuracy(self, test_data):
+        """
+        computes the classifiers accuracy using predictions of given test data
+        :param test_data: test data
+        :return: accuracy as float
+        """
+        X = [line[0] for line in test_data]
+        y = [line[1] for line in test_data]
+
+        return sum([1 if prediction == y[idx] else 0
+                    for idx, prediction in enumerate([self.predict(x) for x in X])]) / len(y)
+
+    def plot(self, mesh_grid_size, accuracy_score=None):
+        """
+        plot the test data
+        :param mesh_grid_size:
+        :param accuracy_score:
+        :return:
+        """
+        X = np.array([np.array(self.vectors[vector_key][KEY_VECTOR]) for vector_key in self.vectors])
+        y = np.array([self.vectors[vector_key][KEY_LABEL] for vector_key in self.vectors])
+
+        if X.shape[1] != 2:
+            raise Exception('Only problems with two dimensions can be plotted')
+
+        # Create color maps
+        cmap_light = ListedColormap(['#FFAAAA', '#AAFFAA', '#AAAAFF'])
+        cmap_bold = ListedColormap(['#FFAAAA', '#AAFFAA', '#AAAAFF'])
+
+        # Plot the decision boundary. For that, we will assign a color to each
+        # point in the mesh [x_min, x_max]x[y_min, y_max].
+        x_min, x_max = X[:, 0].min(), X[:, 0].max()
+        y_min, y_max = X[:, 1].min(), X[:, 1].max()
+        xx, yy = np.meshgrid(np.arange(x_min, x_max, mesh_grid_size),
+                             np.arange(y_min, y_max, mesh_grid_size))
+        ravel = np.c_[xx.ravel(), yy.ravel()]
+        Z = np.array([self.predict(mesh_vector.tolist()) for mesh_vector in ravel])
+        # Put the result into a color plot
+        Z = Z.reshape(xx.shape)
+        plt.figure()
+        plt.pcolormesh(xx, yy, Z, cmap=cmap_light)
+
+        # Plot also the training points
+        plt.scatter(X[:, 0], X[:, 1], c=y, cmap=cmap_bold,
+                    edgecolor='k', s=20)
+        plt.xlim(xx.min(), xx.max())
+        plt.ylim(yy.min(), yy.max())
+        title = 'knn spiral classification (k = {}, records = {} ' + \
+                ('accuracy = {}% ' if accuracy_score is not None else '') + ')'
+        plt.title(title.format(self.k, ravel.shape[0] + X.shape[0], accuracy_score))
+        plt.savefig("knn_spiral.png")
+        plt.show()
