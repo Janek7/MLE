@@ -57,9 +57,8 @@ class ReinforcementLearningAgent:
 
         # attributes
         self.q_table = []  # table of x rows (parameter combinations) with y columns (number of actions) with q values
-        self.initial_state_parameters = None  # save copy of given start parameters from game
+        self.initial_state = None  # save copy of given start parameters from game
         self.state_terminated = False  # boolean flag which is set by the game
-        self.state = None
         self.state_index = None
 
     def learn(self):
@@ -72,14 +71,12 @@ class ReinforcementLearningAgent:
         for i in range(self.episodes):
             print('{}. episode'.format(i))
             self.state_terminated = False
-            self.update_state(self.initial_state_parameters)
+            self.update_state_index(self.initial_state)
 
             while True:
                 self.state_reaction()
                 if self.state_terminated:
                     break
-
-        print(self.q_table)
 
     def state_reaction(self, state=None):
 
@@ -88,7 +85,7 @@ class ReinforcementLearningAgent:
         action_index = self.select_action(state_index)
         reward, future_state = self.reinforcement_learning_domain.action(action_index)
         self.update_q_table(action_index, reward, future_state)
-        self.update_state(future_state)  # for internal training use
+        self.update_state_index(future_state)  # for internal training use
         return action_index  # for external use
 
     def update_q_table(self, action_index, reward, future_state):
@@ -181,8 +178,8 @@ class ReinforcementLearningAgent:
         :param state: state as array of properties
         :return:
         """
-        self.initial_state_parameters = state
-        self.update_state(state)
+        self.initial_state = state
+        self.update_state_index(state)
 
     def get_state_index(self, state):
         """
@@ -198,6 +195,5 @@ class ReinforcementLearningAgent:
             state_index = state_index * size + dim_value_indices[dimension_idx + 1]
         return state_index
 
-    def update_state(self, state):
-        self.state = state
+    def update_state_index(self, state):
         self.state_index = self.get_state_index(state)

@@ -1,18 +1,14 @@
 import time
 from OpenGL.GLUT import *
 from OpenGL.GL import *
-from OpenGL.GLU import *
 from reinforcement_learning.reinforcement_learning_structures import *
 
 # reinforcement learning parameters
-
 EPISODES = 5000
 LEARNING_RATE = 0.01
 DISCOUNT_FACTOR = 0.9
-SELECT_ACTION_STRATEGY = SOFTMAX  # SOFTMAX, GREEDY, E_GREEDY
+SELECT_ACTION_STRATEGY = E_GREEDY  # SOFTMAX, GREEDY, E_GREEDY
 EPSILON = 0.1
-# STATE_DIMENSION_SIZES = [10, 11, 10, 2, 2]  # xBall, yBall, xSchlaeger, xVel, yVel
-
 
 # actions: types of moving the bat
 
@@ -43,113 +39,104 @@ class GameGL(object):
         return bytes(string, "ascii")
 
 
-class PingPongGame(GameGL, ReinforcementLearningDomain):
-    """
-    Ping pong game which trains an reinforcement learning agent to perform bat movement
-    """
+class BasicGame(GameGL, ReinforcementLearningDomain):
 
     windowName = "PingPong"
     pixelSize = 30
-    timeout = 0.05
-    xBall = 3
+    xBall = 5
     yBall = 6
     xSchlaeger = 5
     xV = 1
     yV = 1
-    score = 0
 
+    skip = False
     learning = False
-    postive_rewards = 0
+    positive_rewards = 0
     total_rewards = 0
 
     def __init__(self, name, width=360, height=360):
         super().__init__()
+        self.windowName = name
+        self.width = width
+        self.height = height
 
         # init reinforcement learning structures
         self.actions = [action_left, action_stay, action_right]
         self.state_dimension_values = [
-            np.arange(0, 10),  # -> range inclusive 0 - 10
-            np.arange(0, 11),
-            np.arange(0, 10),
-            np.array([-1, 1]),
-            np.array([-1, 1])
+            # higher bound value is not included
+            np.arange(1, 11),   # x ball
+            np.arange(1, 12),   # y ball
+            np.arange(0, 10),    # x bat
+            np.array([-1, 1]),  # x velocity
+            np.array([-1, 1])   # y velocity
         ]
+
         self.agent = ReinforcementLearningAgent(self, EPISODES, DISCOUNT_FACTOR, LEARNING_RATE, SELECT_ACTION_STRATEGY,
                                                 EPSILON)
+
         self.agent.init_state(self.get_state())
         self.learning = True
         self.agent.learn()
         self.learning = False
 
-        # init game structures
-        self.windowName = name
-        self.width = width
-        self.height = height
-
-    @staticmethod
-    def keyboard(key, x, y):
-        # ESC = \x1w
-        if key == b'\x1b':
-            sys.exit(0)
-
     def action(self, action_index):
 
-        actual_state = [self.xBall, self.yBall, self.xSchlaeger, self.xV, self.yV]
-
-        self.xSchlaeger = self.actions[action_index](actual_state)[2]
-
+        self.xSchlaeger = self.actions[action_index](self.get_state())[2]
         # don't allow puncher to leave the pitch
-        if self.xSchlaeger < 0:
-            self.xSchlaeger = 0
-        if self.xSchlaeger > self.state_dimension_values[2][-1] - 1:
-            self.xSchlaeger = self.state_dimension_values[2][-1] - 1
+        if self.xSchlaeger < self.state_dimension_values[2][0]:
+            self.xSchlaeger = self.state_dimension_values[2][0]
+        if self.xSchlaeger > self.state_dimension_values[2][-1]:
+            self.xSchlaeger = self.state_dimension_values[2][-1]
 
-        # change position regarding to velocity
         self.xBall += self.xV
         self.yBall += self.yV
 
         # change direction of ball if it's at wall
-        if self.xBall > self.state_dimension_values[0][-1] or self.xBall < 1:
-            xVel_values = self.state_dimension_values[3]
-            self.xV = xVel_values[1] if self.xV == xVel_values[0] else xVel_values[0]
-
-        if self.yBall > self.state_dimension_values[1][-1] or self.yBall < 1:
-            yVel_values = self.state_dimension_values[4]
-            self.yV = yVel_values[1] if self.yV == yVel_values[0] else yVel_values[0]
+        if self.xBall > self.state_dimension_values[0][-1] or self.xBall < self.state_dimension_values[0][0]:
+            self.xV = -self.xV
+        if self.yBall > self.state_dimension_values[1][-1] or self.yBall < self.state_dimension_values[1][0]:
+            self.yV = -self.yV
 
         # check whether ball on bottom line
         if self.yBall == 0:
             self.agent.state_terminated = True
-            # check whether ball is at position of player
+            # check whther ball is at position of player
             if self.xSchlaeger == self.xBall or self.xSchlaeger == self.xBall - 1 or self.xSchlaeger == self.xBall - 2:
+                # print("positive reward")
                 reward = 1
                 if not self.learning:
-                    self.postive_rewards += 1
+                    self.positive_rewards += 1
             else:
                 reward = -1
 
             if not self.learning:
                 self.total_rewards += 1
-                print('{}% success rate'.format(round((self.postive_rewards / self.total_rewards) * 100)))
-
+                print('{}% success rate'.format(round((self.positive_rewards / self.total_rewards) * 100)))
         else:
             reward = 0
+
+        # nötig, verfälscht aber ergebnis
+        if self.xBall > self.state_dimension_values[0][-1]:
+            self.xBall = self.state_dimension_values[0][-1]
+        elif self.xBall < self.state_dimension_values[0][0]:
+            self.xBall = self.state_dimension_values[0][0]
+
+        if self.yBall > self.state_dimension_values[1][-1]:
+            self.yBall = self.state_dimension_values[1][-1]
+        elif self.yBall < self.state_dimension_values[1][0]:
+            self.yBall = self.state_dimension_values[1][0]
 
         return reward, self.get_state()
 
     def get_state(self):
         state = [self.xBall, self.yBall, self.xSchlaeger, self.xV, self.yV]
+        x_temp = self.xBall
+        y_temp = self.yBall
 
-        if state[0] > self.state_dimension_values[0][-1]:
-            state[0] = self.state_dimension_values[0][-1]
-        elif state[0] < self.state_dimension_values[0][0]:
-            state[0] = self.state_dimension_values[0][0]
-
-        if state[1] > self.state_dimension_values[1][-1]:
-            state[1] = self.state_dimension_values[1][-1]
-        elif state[1] < self.state_dimension_values[1][0]:
-            state[1] = self.state_dimension_values[1][0]
-
+        if self.xBall > self.state_dimension_values[0][-1] or self.xBall < self.state_dimension_values[0][0]:
+            x_temp += self.xV
+        if self.yBall > self.state_dimension_values[1][-1] or self.yBall < self.state_dimension_values[1][0]:
+            y_temp += self.yV
         return state
 
     def display(self):
@@ -164,7 +151,6 @@ class PingPongGame(GameGL, ReinforcementLearningDomain):
         glMatrixMode(GL_MODELVIEW)
         glLoadIdentity()
 
-        # move bat
         action_index = self.agent.state_reaction(self.get_state())
         self.action(action_index)
 
@@ -172,10 +158,16 @@ class PingPongGame(GameGL, ReinforcementLearningDomain):
         self.draw_ball()
         self.draw_computer()
 
-        # timeout for gui update
-        time.sleep(self.timeout)
+        # timeout of 100 milliseconds
+        time.sleep(0.01)
 
         glutSwapBuffers()
+
+    @staticmethod
+    def keyboard(key, x, y):
+        # ESC = \x1w
+        if key == b'\x1b':
+            sys.exit(0)
 
     def start(self):
         glutInit()
@@ -238,5 +230,5 @@ class PingPongGame(GameGL, ReinforcementLearningDomain):
 
 
 if __name__ == '__main__':
-    game = PingPongGame("PingPong")
+    game = BasicGame("PingPong")
     game.start()
