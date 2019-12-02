@@ -187,7 +187,7 @@ public class MNISTReader extends JFrame {
             double rec_activity = 0;
 
             for (int j = 0; j < out.length; j++) {
-                rec_activity += (w[i_rec][j] * out[j]);
+                rec_activity += (w[j][i_rec] * out[j]);
             }
 
             rec[i_rec] = sigmoid(rec_activity);
@@ -390,9 +390,9 @@ public class MNISTReader extends JFrame {
 	/*
 	  public static void writeFile(String fileName, byte[] buf)
 	    {
-			
+
 			FileOutputStream fos = null;
-			
+
 			try
 			{
 			   fos = new FileOutputStream(fileName);
